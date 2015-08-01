@@ -1,0 +1,247 @@
+<p>Zend_Form can save you a lot of time.  It almost completely abstracts away
+the most boring and error-prone aspects of developing secure and standards-compliant
+HTML forms.  But one thing it doesn't do out of the box is compound elements, such 
+as three-field dates.  In this post I'll show you the easiest way to do this ZF-style.</p>
+
+<h2>Setting the scene</h2>
+
+<p>The best place to start is always at the end, so let's begin with a simple use-case
+for a date field.  Consider this very simple controller, which sets up a form and
+processes it.</p>
+
+<pre class="snippet">
+&lt;?php
+
+class IndexController extends App_Controller_Action 
+{
+	public function indexAction ()
+	{
+		// create the form
+
+		$form = new Zend_Form();
+		$form-&gt;setAction('/');
+		$form-&gt;setMethod('post');		
+		
+		// create the date field
+
+		$date = new App_Form_Element_Date('date');
+		$date-&gt;setLabel('Date');
+		$date-&gt;setRequired(true);
+		
+		// create the submit button
+
+		$submit = new Zend_Form_Element_Submit('submit');
+		$submit-&gt;setLabel('Submit');
+		
+		// add the elements to the form
+
+		$form-&gt;addElements(array($date, $submit));
+		
+		// process the form is the request is a POST
+
+		if ($this-&gt;getRequest()-&gt;isPost())
+		{
+			if ($form-&gt;isValid($_POST))
+			{
+				var_dump($form-&gt;getValues());
+				die;
+			}
+		}
+
+		// stick the form into the view
+		
+		$this-&gt;view-&gt;form = $form;
+	}	
+}
+</pre>
+
+<p>And a view to render the form:</p>
+
+<pre class="snippet">
+&lt;?php echo $this-&gt;form ?&gt;
+</pre>
+
+<p>The problem, of course, is that there <em>is</em> no App_Form_Element_Date.
+But if there was, this is pretty much how we'd expect it to behave: we can add it
+to a form like any other field, and it gets validated along with the other fields in 
+the form.  The problem, though, is that a) Zend_Form elements typically correspond
+to exactly one HTML form element, such as an INPUT or a SELECT, and our date field
+has three, and b) we've added a field to the form called 'date', but in our HTML 
+output, there will only be date_day, date_month and date_year.</p>
+
+<p>The challenge is to tie the date parts together when the form is submitted, to 
+process the date as a unit, and then to output the date in three parts again if there
+is a form error or the form needs to be redisplayed.</p>
+
+<h2>Getting our element to render</h2>
+
+<p>The first step in tackling this is to get our new date field to render.  To do
+this, we need two things: firstly, an element class to encapsulate business logic; 
+and secondly, a view renderer to encapsulate presentation.</p>
+
+<pre class="snippet">
+
+// element
+
+&lt;?php
+
+class App_Form_Element_Date extends Zend_Form_Element_Xhtml
+{
+	public $helper = 'formDate';
+}
+
+// view helper
+
+&lt;?php
+  
+class Zend_View_Helper_FormDate extends Zend_View_Helper_FormElement 
+{
+	public function formDate ($name, $value = null, $attribs = null)
+	{
+		// if the element is rendered without a value,
+		// show today's date
+
+		if ($value === null)
+		{
+			$value = date('Y-m-d');
+		}
+		
+		list($year, $month, $day) = split('-', $value);
+		
+		// build select options
+		
+		$date = new Zend_Date();
+		
+		$dayOptions = array();
+		for ($i = 1; $i &lt; 32; $i ++)
+		{
+			$idx = str_pad($i, 2, '0', STR_PAD_LEFT);
+			$dayOptions[$idx] = str_pad($i, 2, '0', STR_PAD_LEFT);
+		}
+		
+		$monthOptions = array();
+		for ($i = 1; $i &lt; 13; $i ++)
+		{
+			$date-&gt;set($i, Zend_Date::MONTH);
+			$idx = str_pad($i, 2, '0', STR_PAD_LEFT);
+			$monthOptions[$idx] = $date-&gt;toString('MMMM');
+		}
+		
+		$yearOptions = array();
+		for ($i = 1970; $i &lt; 2031; $i ++)
+		{
+			$yearOptions[$i] = $i;
+		}
+		
+		// return the 3 selects separated by -
+		
+		return
+			$this-&gt;view-&gt;formSelect(
+				$name . '_day',
+				$day,
+				$attribs,
+				$dayOptions) . ' - ' .
+			$this-&gt;view-&gt;formSelect(
+				$name . '_month',
+				$month,
+				$attribs,
+				$monthOptions) . ' - ' .
+			$this-&gt;view-&gt;formSelect(
+				$name . '_year',
+				$year,
+				$attribs,
+				$yearOptions			
+			);
+	}
+}
+</pre>
+
+<p>The element class is quite simple.  All it's doing is declaring that the class
+'Zend_View_Helper_FormDate' should be used to render it.</p>
+
+<p>The view helper is a little longer in code, but no more complex.  All it's doing
+is generating three arrays for all the possible date options ([1..31] [1..12] [1970..2030]),
+and then rendering three select boxes with those options. The choice of year range
+in this case is arbitrary.  I have not used Zend_Date to filter the date value passed, 
+because Zend_Date automatically corrects invalid dates.  For this example, if the inputted
+date is invalid, I'd like the form to show again with an error message and the value 
+that the user selected.</p>
+
+<h2>Validation</h2>
+
+<p>At this point, we have a form that can render a three-part date field, but cannot 
+process it.  In order to process it, we're going to need to do two things.  Firstly, 
+we'll need create a date validator to determine if the date selected is valid (i.e. not
+31 June).  Secondly, we'll need to join date_day, date_month and date_year into one value,
+so that when getValues() is called on the form only 'date' is returned.</p>
+
+<p>Let's start with the validator:</p>
+
+<pre class="snippet">
+&lt;?php
+
+class App_Validate_Date extends Zend_Validate_Abstract 
+{
+	const INVALID_DATE = 'invalidDate';
+	
+	protected $_messages = array(
+		self::INVALID_DATE =&gt; 'Invalid date.'
+	);
+	
+	public function isValid ($value, $context = null)
+	{
+		if (date('Y-m-d', strtotime($value)) != $value)
+		{
+			return false;
+		}
+		
+		return true;
+	}
+}
+</pre>
+
+<p>This is a very simple validator which uses the date() and strtotime() functions to
+determine if a given date is invalid.  That's all very well, but we need to tell the
+date field to use this validator.  So let's edit our element class:</p>
+
+<pre class="snippet">
+class App_Form_Element_Date extends Zend_Form_Element_Xhtml
+{
+	public $helper = 'formDate';
+
+	public function init ()
+	{
+		$this-&gt;addValidator(new App_Validate_Date());
+	}
+	
+	public function isValid ($value, $context = null)
+	{
+		// ignoring value -- it'll be empty
+		
+		$name = $this-&gt;getName();
+
+		$value = $context[$name . '_year'] . '-' .
+					$context[$name . '_month'] . '-' .
+					$context[$name . '_day'];
+					
+		$this-&gt;_value = $value;
+		
+		return parent::isValid($value, $context);
+	}
+}
+</pre>
+
+<p>The init() function tells the element to add the date validator to the validation
+chain.   The isValid() function is called to determine if a given value is valid against
+that chain.  There's a little bit of trickery here: $value will always be NULL because there
+is no field in the form called 'date', but, thankfully, Zend_Form passes all $_POST values in
+as $context, so we can just grab _day, _month and _year to compile our date value.  By setting
+$this-&gt;_value, getValues() will return the correct value as in our use case.</p>
+
+<p>The nice thing about doing complex elements this way, is that the validator is not bound to the
+element (although in this case the reverse is true).  Because validation logic has been encapsulated
+in a validator class, you could use the validator to validate dates in other contexts.</p>
+
+<p>Although this example is very simple, it should give you the tools to create more complex
+compound elements.  The theory of operation of element, view helper and validator applies to elements
+of any complexity.</p>

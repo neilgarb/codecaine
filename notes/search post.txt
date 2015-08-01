@@ -1,0 +1,71 @@
+<p>Today I implemented a new search algorithm on Zoopy.  I've been working on this project over the last couple of months, on and off, and I thought I'd share with you some of the details and learnings.  I can't divulge most of the efficiencies and optimizations for IP reasons, but I'll try to give you enough juice to make this post worth reading.</p>
+
+<h2>The background: Fulltext searches</h2>
+
+<p>In one form or another Zoopy has always used fulltext-type search systems.  The previous incarnation of Zoopy, on which I was only a maintainer, used Zend Framework's Lucene bridge.  When I rebuilt Zoopy late last year I decided to revert to MySql's FULLTEXT indeces.</p>
+
+<p>Soon after the current version was launched in December, we realised that neither solution was adequate.  In no particular order, the issues we encountered were as follows:</p>
+
+<ol>
+	<li>Fulltext search mechanisms are generally quite closed. For instance, a developer has only trivial control over how MySql's FULLTEXT indices work.  You can, for instance, choose the minimum size of words to index, and with Lucene and Sphinx you can weight results from different fields, but in a general sense these indices are simply counting occurrences of your search queries.</li>
+
+	<li>In a fulltext index, no word has any more relevance than any other word.  For instance, the word 'computer' has the same relevance, should the number of occurrences be equal, as 'macintosh'.  Generally speaking, occurrences of search keywords in indexed texts are context-independent.</li>
+
+	<li>Boolean search is dead.  With improved relevancy algorithms on search engines such as Google,  the need for boolean searches is gone.  In fringe cases, wrapping query phrases with "" will yield better results, but enclosing phrases is no longer the first port of call.  When last did you wrap a phrase in quotes <em>before</em> trying the search without them?  This has been confirmed, at least in Zoopy's context, by observing user behaviour and search patterns.  And let's be honest: without boolean searches, fulltext algorithms are simply hit counters.</li>
+
+	<li>Fulltext indices, generally, offer only trivial query expansion.  For instance, MySql now has the 'WITH QUERY EXPANSION' directive, which finds results with keywords that <em>also</em> appear in a certain percentage of matches, but does not handle plurals/singulars or misspellings.  This is only fair &ndash; it would be tough to build an index that handles plurals in every language &ndash; but is nevertheless a weakness.</li>
+
+</ol>
+
+<p>I could go on.</p>
+
+<h2>Next step: requirements</h2>
+
+<p>Based on these shortcomings, I developed the following requirements for a new search mechanism:</p>
+
+<ol>
+	<li>The algorithm should be relatively atomic at an application level.  For efficiency and elegancy purposes, I decided that an algorithm which utilises PHP code in any wouldn't work.  I wanted something that would be callable in a similar way to MySql's MATCH() AGAINST(), which is tidy and can also be used in an ORDER BY clause.</li>
+
+	<li>The algorithm should be able (transparently) to expand the query using plurals/singulars, misspellings, alternative spellings, related keywords and similar keywords (at least phonetically).</li>
+
+	<li>The algorithm should easily be able to consider other business logic into the algorithm.  In Zoopy's case, this includes media popularity (i.e. views, comments, etc.) and recency.</li>
+
+	<li>The algorithm should be cacheable, ideally through MySql's query cache.</li>
+
+	<li>The algorithm should learn based on what search queries lead to clicks on which media items.</li> 
+
+</ol>
+
+<h2>Research: if it's good for Google, it's good for me</h2>
+
+<p>After scouring the web for potential algorithms which met my requirements, I finally stumbled upon Sergey Brin and Lawrence Page's paper entitled <a href="http://infolab.stanford.edu/~backrub/google.html" title="The Anatomy of a Large-Scale Hypertextual Web Search Engine">The Anatomy of a Large-Scale Hypertextual Web Search Engine</a>.  Most of the paper deals with Google's PageRank algorithm, which doesn't apply in this case because it's search query-independent, but the paper details its authors' method of breaking up documents into tokens, breaking search queries into similar tokens, and then ranking matching documents.</p>
+
+<p>The method struck me as elegant for several reasons:</p>
+
+<ol>
+	<li>If documents and search queries are tokenised using the same algorithm, then queries 'speak the same language' as documents.</li>
+
+	<li>By having tokenised documents in a user space (as opposed to a proprietary index file), the developer has total control over what a 'match' is, and how relevant that match is against the search query.</li>
+</ol>
+
+<h2>Development: first issues</h2>
+
+<p>The first obvious issue I had when trying to apply the Google paradigm to Zoopy's search was efficiency.  One thing you lose when ditching fulltext indices is the efficiency that's built into database engines.  For this reason, my first attempts at writing an equivalent to MySql's MATCH() failed miserably, with query times running into tens of seconds on a set of 25 000 documents.  Clearly no good.</p>
+
+<p>The second issue I had was how to favour phrases over individual keywords.  This is taken for granted in boolean syntaxes, but is not trivial when efficiency is a concern.</p>
+
+<h2>The final product</h2>
+
+<p>I'll have to skip over my actual solutions to these problems, but I will say the following about Zoopy's new search algorithm:</p>
+
+<ol>
+	<li>It doesn't currently handle any word alternatives, but the algorithm itself is able to deal with these.  I'll start with pluralization/singularization in the next few days, and will try to get misspellings done in the next couple of weeks.</li>
+
+	<li>It weights title matches over description and tag matches.</li>
+
+	<li>It weights phrase matches over individual words, and weights longer phrases over shorter phrases.  Furthermore, it weights phrases with the same ordering as in the search query over phrases which contain words from the query but in the wrong order.  For instance, 'world cup' is favoured over 'cup world', which in turn is favoured over an occurrence of either 'world' or 'cup', or both with at least one word between them.</li>
+
+	<li>It doesn't currently take into account views/comments/etc., but is able to.</li>
+</ol>
+
+<p>Please try it out at <a href="http://www.zoopy.com" title="Zoopy">http://www.zoopy.com</a>.  Feel free to comment here or on Zoopy if you've got any feedback.</p>

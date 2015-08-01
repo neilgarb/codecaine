@@ -1,0 +1,4 @@
+Sitemap: http://www.codecaine.co.za/sitemap.xml
+User-Agent: *
+	Allow: /
+	Disallow: /svn

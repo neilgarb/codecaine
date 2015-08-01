@@ -1,0 +1,15 @@
+RewriteEngine On
+
+RewriteRule ^blog/discuss/(.*)/rss /posts/$1/rss [L,R=301]
+RewriteRule ^blog/discuss/(.*) /posts/$1 [L,R=301]
+RewriteRule ^blog/posts/(.*) /posts/$1 [L,R=301]
+RewriteRule ^blog/tags/(.*) /tags/$1 [L,R=301]
+RewriteRule ^portfolio /about [L,R=301]
+RewriteRule ^contact /about [L,R=301]
+RewriteRule ^blog/rss /rss [L,R=301]
+RewriteRule ^posts/?$ / [L,R=301]
+RewriteRule ^blog/?$ / [L,R=301]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule (.*) index.php?url=$1 [L,QSA]
+php_value magic_quotes_gpc off

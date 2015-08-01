@@ -1,0 +1,125 @@
+<?php echo $this->doctype() ?>
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+
+<head>
+
+<?php echo $this->headTitle() ?>
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="description" content="<?php echo $this->escape($this->metaDescription) ?>" />
+<meta name="keywords" content="<?php echo strtolower(join(',', $this->metaKeywords)) ?>" />
+<meta http-equiv="Robots" content="index, follow" />
+<link rel="alternate" type="application/rss+xml" title="Codecaine.co.za RSS" href="http://www.codecaine.co.za/rss/" />
+
+<?php echo $this->headLink() ?>
+<?php echo $this->headScript() ?>
+
+</head>
+
+<body>
+
+	<div id="header-wrap">
+		<div id="header">
+			<h1><?php echo $this->escape($this->title) ?></h1>
+		</div>
+	</div>
+
+	<div id="content-wrap">
+		<div id="content">
+			<?php echo $this->layout()->content ?>
+		</div>
+		<div id="nav">
+			<div class="block">
+				<h2>Codecaine.co.za</h2>
+				<ul>
+					<li><a href="/" title="Codecaine.co.za">Home</a></li>
+					<li><a href="/about" title="About me">About me</a></li>
+					<li><a href="/rss" title="Codecaine.co.za RSS">RSS feed</a></li>
+				</ul>
+				<p class="twitter">Prefer to receive updates on Twitter? <a href="http://www.twitter.com/neil_garb" title="Follow me on twitter" class="external">Follow me</a>.</p>
+			</div>
+			<div class="block">
+				<h2>Tags</h2>
+				<ul>
+					<?php foreach ($this->tags as $tag): ?>
+					<?php $postCount = $tag->findPostViaPostTag()->count() ?>
+					<li>
+						<a href="/tags/<?php echo $tag->label ?>" title="<?php echo $this->escape($tag->title) ?>">
+							<?php echo $this->escape($tag->title) ?>
+							(<?php echo $postCount ?>)			
+						</a>
+					</li>
+					<?php endforeach; ?>			
+				</ul>
+			</div>
+			<div class="block">
+				<h2>Archive</h2>
+				<ul>
+					<?php foreach ($this->archiveMonths() as $month): ?>
+					<?php $date = new Zend_Date($month['year'].'-'.$month['month'].'-01', Zend_Date::ISO_8601) ?>
+					<li><a href="/posts/<?php echo $month['year'] ?>/<?php echo $month['month'] ?>" title=""><?php echo $date->toString('MMMM') ?> <?php echo $month['year'] ?></a></li>					
+					<?php endforeach; ?>
+				</ul>
+			</div>
+			<div class="block">
+				<h2>Links</h2>
+				<ul>
+					<li><a href="http://www.newrelease.co.za/" title="New Release" class="external">New Release</a></li>
+					<li><a href="http://www.arbitraryuser.co.za/" title="arbitrary user" class="external">arbitrary user</a></li>
+					<li><a href="http://www.dociletree.co.za/" title="Docile Tree" class="external">Docile Tree</a></li>
+				</ul>
+			</div>			
+			<div class="block license">
+				<h2>License</h2>
+				<a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/" class="no-hover">
+					<img alt="Creative Commons License" style="border-width:0" src="http://i.creativecommons.org/l/by-sa/3.0/88x31.png"/>
+				</a>
+				<p>				
+					This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/3.0/" class="external">Creative Commons Attribution-Share Alike 3.0 Unported License</a>.
+				</p>
+			</div>
+			<div class="block badges">
+				<h2>Badges</h2>
+				<a href="http://validator.w3.org/check?uri=referer">
+					<img src="http://www.w3.org/Icons/valid-xhtml10" alt="Valid XHTML 1.0 Strict" />
+				</a>				
+				<a href="http://www.spreadfirefox.com/?q=affiliates&amp;id=0&amp;t=209">
+					<img alt="Firefox 2" title="Firefox 2" src="http://sfx-images.mozilla.org/affiliates/Buttons/firefox2/firefox-spread-btn-1.png" />		
+				</a>				
+				<a href="http://framework.zend.com/">
+					<img src="http://framework.zend.com/images/PoweredBy_ZF_4LightBG.png" alt="Powered by Zend Framework" />
+				</a>				
+				<a href="http://technorati.com/faves?sub=addfavbtn&amp;add=http://codecaine.co.za/">
+					<img src="http://static.technorati.com/pix/fave/tech-fav-1.png" alt="Add to Technorati Favorites" />
+				</a>				
+				<a href="http://afrigator.com/author/7592" title="Afrigator">
+					<img src="http://afrigator.com/track/7592-sblk.gif" alt="Afrigator" />
+				</a>
+				<a href="http://www.amatomu.com/" title="http://www.amatomu.com/">
+					<img src="http://www.amatomu.com/images/badges/badge_i_heart_black.png" alt="I shmaak SA Blogs, sorted with Amatomu.com" />
+				</a>
+			</div>
+		</div>
+		<div style="clear:both"></div>
+	</div>
+
+	<script src="http://www.amatomu.com/embed.php?blog_id=2078" type="text/javascript"></script>
+
+	<script type="text/javascript">
+	var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+	document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+	</script>
+	<script type="text/javascript">
+	var pageTracker = _gat._getTracker("UA-3186635-1");
+	pageTracker._initData();
+	pageTracker._trackPageview();
+	</script>
+	<script type="text/javascript">
+	var woopra_id = '2749471410';
+	</script>
+	<script src="http://static.woopra.com/js/woopra.js"></script>
+
+</body>
+
+</html>

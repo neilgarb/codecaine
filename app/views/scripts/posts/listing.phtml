@@ -1,0 +1,57 @@
+<?php foreach ($this->posts as $post): ?>
+
+<div class="post-preview">
+
+	<h2>
+		<a href="/posts/<?php echo $post->label ?>" title="<?php echo $this->escape($post->title) ?>">
+			<?php echo $this->escape($post->title) ?>
+		</a>
+	</h2>
+	
+	<p class="date"><?php echo new Zend_Date($post->posted_at, Zend_Date::ISO_8601) ?></p>
+	
+	<?php echo $post->blurb ?>
+	
+	<ul class="actions">
+		<li>
+			<a href="/posts/<?php echo $post->label ?>" title="<?php echo $this->escape($post->title) ?>">
+				Read more
+			</a>
+		</li>
+		<li>
+			<a href="/posts/<?php echo $post->label ?>#comments" title="<?php echo $this->escape($post->title) ?>">
+				<?php $commentCount = $post->findDependentRowset('Comment')->count() ?> 
+				Discuss (<?php echo $commentCount ?> comment<?php if ($commentCount != 1): ?>s<?php endif; ?>)
+			</a>
+		</li>
+		<li>
+			Tags:
+			<?php foreach ($post->findTagViaPostTag() as $tag): ?>
+			<a href="/tags/<?php echo $tag->label ?>" title="<?php echo $this->escape($tag->title) ?>"><?php echo $this->escape($tag->title) ?></a> 
+			<?php endforeach; ?>
+		</li>
+	</ul>
+
+</div>
+	
+<?php endforeach; ?>
+
+<div style="clear:both"></div>
+
+<?php if ($this->pageCount > 1): ?>
+<div class="post-pagination">	
+	<div class="prev">
+		&nbsp;
+		<?php if ($this->page > 1): ?>
+		<a href="<?php echo $this->paginationBase ?>?p=<?php echo $this->page - 1 ?>" title="Recent Posts">&laquo; Newer posts</a>
+		<?php endif; ?>
+	</div>
+	<div class="next">
+		<?php if ($this->page < $this->pageCount): ?>
+		<a href="<?php echo $this->paginationBase ?>?p=<?php echo $this->page + 1 ?>" title="Recent Posts">Older posts &raquo;</a>
+		<?php endif ;?>
+		&nbsp;
+	</div>
+	<div style="clear:both"></div>
+</div>
+<?php endif; ?>

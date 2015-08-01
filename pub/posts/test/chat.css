@@ -1,0 +1,16 @@
+* {
+font-size:12px;
+font-family:Arial,sans-serif;
+color:#333;
+padding:0;
+margin:0;
+}
+
+div#chat {
+width:780px;
+height:500px;
+border:1px solid #ddd;
+background-color:#efefff;
+margin:15px;
+position:relative;
+}

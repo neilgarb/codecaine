@@ -1,0 +1,90 @@
+<p>I've been finding very it very tricky to get around
+to blogging recently.  Firstly, I've been busy both with
+Zoopy and with freelance work.  Secondly, the Zend Framework
+API has been improving at such a rate that it's becoming less
+and less necessary to invent interesting code to achieve my
+goals, and therefore more and more difficult to find topics to
+share with you.</p>
+
+<p>So I thought I'd start a series of mini posts dedicated to 
+what are essentially Zend Framework use cases.  These are not
+going to be in any particular order, but I hope as always that
+you'll be able to make use them.</p>
+
+<p>I'll start things off with a technique to use module-specific
+models.</p>
+
+<h2>The problem</h2>
+
+<p>If you're like me, you like to use different classes 
+to represent the same model in different modules.  The rationale
+is quite simple: by using different classes you're encapsulating
+module-specific business logic within that module.  For instance,
+a user model in an admin module may require functions related to
+access control, whereas the model's counterpart in a website module
+might need functionality to send messages to other users.</p>
+
+<p>But if you're like me you've also encountered the difficulty of
+using classes with the same name with Zend_Loader's
+registerAutoload().  The problem is that registerAutoload() uses
+PHP's include path, in which path ordering is significant.  This
+means that you can't, in your bootstrap, just set the include path
+to include the model directories for each module.</p>
+
+<p>How, then, do you set the following up?</p>
+
+<pre>
+modules/
+	website/
+		models/
+			User.php
+	admin/
+		models/
+			User.php
+</pre>
+
+<h2>The solution</h2>
+
+<p>The solution is actually amazingly simple.  The way to achieve 
+this is to modify the include path in a subclass of
+Zend_Controller_Action:</p>
+
+<pre>
+&lt;?php
+
+// bootstrap
+
+set_include_path(
+	get_include_path() . PATH_SEPARATOR .
+	'../library'
+);
+
+require_once 'Zend/Loader.php';
+Zend_Loader::registerAutoload();
+
+// subclass of Zend_Controller_Action -- this is shared between
+// controllers in the application
+
+class App_Controller_Action extends Zend_Controller_Action
+{
+	public function init()
+	{
+		$module = $this-&gt;getRequest()-&gt;getModuleName();
+		set_include_path(
+			get_include_path() . PATH_SEPARATOR .
+			'../modules/' . $module . '/models'
+		);
+	}
+}
+</pre>
+
+<p>You can now safely call...</p>
+
+<pre>
+&lt;?php
+
+$user = new User();
+</pre>
+
+<p>...and ZF's autoload functionality will instantiate the correct
+class based on the module that you're in.</p>
